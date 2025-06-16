@@ -49,7 +49,7 @@ const sketchFactory = (p) => {
         });
 
         if (state.isDrawing && state.currentPath.length > 1) {
-            let color = '#94a3b8'; // Default wall color
+            let color = '#94a3b8';
             if (state.currentTool === 'trench') color = '#a16207';
             if (state.currentTool === 'water') color = '#38bdf8';
             p.stroke(color);
@@ -77,8 +77,8 @@ const sketchFactory = (p) => {
     }
 
     const drawWater = () => {
-        p.stroke(14, 116, 144, 150); // a teal color
-        p.fill(56, 189, 248, 100); // sky-400 with transparency
+        p.stroke(14, 116, 144, 150);
+        p.fill(56, 189, 248, 100);
         p.strokeWeight(1);
         state.water.forEach(body => {
             p.beginShape();
@@ -109,14 +109,12 @@ const sketchFactory = (p) => {
         state.cannons.forEach((cannon, index) => {
             p.push();
             p.translate(cannon.x, cannon.y);
-
             if (state.selectedCannon === index) {
                 p.noFill();
                 p.stroke('#0ea5e9');
                 p.strokeWeight(2);
                 p.ellipse(0, 0, 45, 45);
             }
-
             p.rotate(p.radians(cannon.angle));
             p.fill('#334155'); p.noStroke(); p.ellipse(-5, 0, 30, 30);
             p.fill('#1e293b'); p.rect(0, -4, 25, 8);
@@ -183,57 +181,90 @@ const sketchFactory = (p) => {
     };
 
     class Cannonball {
-        constructor(x, y, angle, power) {
-            this.pos = p.createVector(x, y);
-            this.vel = p5.Vector.fromAngle(p.radians(angle));
-            this.vel.mult(power * 0.2);
-            this.gravity = p.createVector(0, 0.2);
+        constructor(x, y, angle, power, p5) {
+            this.p = p5;
+            this.pos = this.p.createVector(x, y);
+            this.vel = this.p.constructor.Vector.fromAngle(this.p.radians(angle));
+            this.vel.mult(power * 0.25);
+            this.gravity = this.p.createVector(0, 0.2);
             this.path = [];
             this.stopped = false;
+
+            this.willHit = this.predictHit();
+            this.mode = this.willHit ? 'arc' : 'direct';
         }
+
+        predictHit() {
+            const lookAhead = 2000;
+            const endPoint = this.p.createVector(this.pos.x + this.vel.x * lookAhead, this.pos.y + this.vel.y * lookAhead);
+            const allObstacles = [...state.walls, ...state.trenches, ...state.water];
+            for (const obstacle of allObstacles) {
+                for (let i = 0; i < obstacle.length - 1; i++) {
+                    const pt1 = obstacle[i];
+                    const pt2 = obstacle[i + 1];
+                    if (this.lineIntersect(this.pos.x, this.pos.y, endPoint.x, endPoint.y, pt1.x, pt1.y, pt2.x, pt2.y)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         update() {
             if (this.stopped) return;
             this.path.push(this.pos.copy());
-            this.vel.add(this.gravity);
+
+            if (this.mode === 'arc') {
+                this.vel.add(this.gravity);
+            }
+
             this.pos.add(this.vel);
             this.checkCollisions();
         }
+
         checkCollisions() {
             if (this.path.length < 2) return;
             const lastPos = this.path[this.path.length - 2];
             const currentPos = this.pos;
-            const checkLineCollision = (lines) => {
-                for (const line of lines) {
-                    for (let i = 0; i < line.length - 1; i++) {
-                        const pt1 = line[i]; const pt2 = line[i + 1];
-                        if (this.lineIntersect(lastPos.x, lastPos.y, currentPos.x, currentPos.y, pt1.x, pt1.y, pt2.x, pt2.y)) return true;
+            const allObstacles = [...state.walls, ...state.trenches, ...state.water];
+
+            for (const obstacle of allObstacles) {
+                for (let i = 0; i < obstacle.length - 1; i++) {
+                    const pt1 = obstacle[i];
+                    const pt2 = obstacle[i + 1];
+                    if (this.lineIntersect(lastPos.x, lastPos.y, currentPos.x, currentPos.y, pt1.x, pt1.y, pt2.x, pt2.y)) {
+                        this.stopped = true;
+                        this.impactEffect();
+                        return;
                     }
                 }
-                return false;
             }
-            if (checkLineCollision(state.walls) || checkLineCollision(state.water)) { this.stopped = true; this.impactEffect(); }
-            else if (checkLineCollision(state.trenches)) { this.stopped = true; this.impactEffect(); }
         }
+
         lineIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
             const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4); if (den == 0) return false;
             const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
             const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
             return t > 0 && t < 1 && u > 0 && u < 1;
         }
-        impactEffect() { p.fill(251, 146, 60, 150); p.noStroke(); p.ellipse(this.pos.x, this.pos.y, 30, 30); }
+        impactEffect() { this.p.fill(251, 146, 60, 150); this.p.noStroke(); this.p.ellipse(this.pos.x, this.pos.y, 30, 30); }
         draw() {
-            p.noStroke(); p.fill(255); p.ellipse(this.pos.x, this.pos.y, 10, 10);
-            p.stroke(255, 0, 0, 100); p.strokeWeight(2); p.noFill(); p.beginShape();
-            this.path.forEach(pt => p.vertex(pt.x, pt.y)); p.endShape();
+            this.p.noStroke(); this.p.fill(255); this.p.ellipse(this.pos.x, this.pos.y, 10, 10);
+
+            if (this.mode === 'arc') {
+                this.p.stroke(255, 0, 0, 100); this.p.strokeWeight(2); this.p.noFill(); this.p.beginShape();
+                this.path.forEach(pt => this.p.vertex(pt.x, pt.y));
+                this.p.endShape();
+            }
         }
-        isOffscreen() { return (this.pos.y > p.height || this.pos.x < 0 || this.pos.x > p.width); }
+        isOffscreen() { return (this.pos.y > this.p.height || this.pos.x < 0 || this.pos.x > this.p.width || this.pos.y < 0); }
     }
 
     p.fireAllCannons = () => {
         if (state.cannons.length > 0) {
             state.cannonballs = [];
             state.cannons.forEach(cannon => {
-                state.cannonballs.push(new Cannonball(cannon.x, cannon.y, cannon.angle, cannon.power));
+                state.cannonballs.push(new Cannonball(cannon.x, cannon.y, cannon.angle, cannon.power, p));
             });
             setInfo(`Volley of ${state.cannons.length} fired!`);
         } else { setInfo('You must place cannons first!'); }
@@ -306,7 +337,6 @@ const sketchFactory = (p) => {
         let closest = { distSq: Infinity, type: null, index: -1 };
         const clickPos = p.createVector(p.mouseX, p.mouseY);
 
-        // Check cannons
         state.cannons.forEach((cannon, index) => {
             const dSq = p.dist(clickPos.x, clickPos.y, cannon.x, cannon.y) ** 2;
             if (dSq < closest.distSq) {
@@ -314,7 +344,6 @@ const sketchFactory = (p) => {
             }
         });
 
-        // Check paths
         const findClosestInPaths = (paths, type) => {
             paths.forEach((path, index) => {
                 for (let i = 0; i < path.length - 1; i++) {
@@ -329,9 +358,8 @@ const sketchFactory = (p) => {
         findClosestInPaths(state.walls, 'walls');
         findClosestInPaths(state.water, 'water');
 
-        // Use a single threshold, e.g., 20px
         if (closest.distSq < 400) {
-            const typeName = closest.type.slice(0, -1); // make singular
+            const typeName = closest.type.slice(0, -1);
             if (closest.type === 'cannons') {
                 if (state.selectedCannon === closest.index) {
                     state.selectedCannon = null;
@@ -409,12 +437,21 @@ function generateFort() {
     const cx = w / 2; const cy = h / 2; let size = Math.min(w, h) * 0.3;
     switch (state.fortType) {
         case 'square': state.walls.push([{ x: cx - size / 2, y: cy - size / 2 }, { x: cx + size / 2, y: cy - size / 2 }, { x: cx + size / 2, y: cy + size / 2 }, { x: cx - size / 2, y: cy + size / 2 }]); break;
-        case 'circular': let circlePoints = []; for (let a = 0; a <= 360; a += 10) { let rad = p5.prototype.radians(a); circlePoints.push({ x: cx + (size / 2) * Math.cos(rad), y: cy + (size / 2) * Math.sin(rad) }); } state.walls.push(circlePoints); break;
+        case 'circular':
+            let circlePoints = [];
+            for (let a = 0; a <= 360; a += 10) {
+                // FIX: Use the 'sketch' instance to call radians()
+                let rad = sketch.radians(a);
+                circlePoints.push({ x: cx + (size / 2) * Math.cos(rad), y: cy + (size / 2) * Math.sin(rad) });
+            }
+            state.walls.push(circlePoints);
+            break;
         case 'star':
             let starPoints = []; const outerRadius = size / 2; const innerRadius = size / 4; const points = 5;
             for (let i = 0; i <= points * 2; i++) {
                 let radius = i % 2 === 0 ? outerRadius : innerRadius;
-                let angle = p5.prototype.radians(i * (360 / (points * 2)) - 90);
+                // FIX: Use the 'sketch' instance to call radians()
+                let angle = sketch.radians(i * (360 / (points * 2)) - 90);
                 starPoints.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) });
             }
             state.walls.push(starPoints);
@@ -431,6 +468,7 @@ function resetSimulation() {
 
 // --- Initialize ---
 document.addEventListener('DOMContentLoaded', () => {
+    // This creates the p5 instance and assigns it to our global 'sketch' variable
     sketch = new p5(sketchFactory);
 
     document.getElementById('tool-select').addEventListener('click', () => setTool('select'));
