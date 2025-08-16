@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fort Siege Simulator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    
+    <link href="css/style.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="text-slate-800">
+
+    <div id="app-container" class="w-full h-screen flex flex-col p-4 gap-4">
+        <header class="text-center flex-shrink-0">
+            <h1 class="text-3xl md:text-4xl font-bold">Fort Siege Simulator</h1>
+            <p class="text-sm md:text-base text-slate-500 mt-1">Design defenses, place artillery, and test your strategy.</p>
+        </header>
+
+        <div class="flex-grow flex flex-col md:flex-row gap-4 min-h-0">
+            <aside id="controls" class="w-full md:w-72 lg:w-80 p-4 border border-slate-200 rounded-lg shadow-lg control-panel flex-shrink-0 flex flex-col gap-6 overflow-y-auto">
+                
+                <div>
+                    <h2 class="text-lg font-semibold border-b border-slate-300 pb-2 mb-3">Fortress</h2>
+                    <select id="fort-select" class="w-full p-2 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="square">Square Keep</option>
+                        <option value="circular">Circular Tower</option>
+                        <option value="star">Star Fort</option>
+                        <option value="custom">Custom (Draw Walls)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <h2 class="text-lg font-semibold border-b border-slate-300 pb-2 mb-3">Tools</h2>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="tool-select" class="p-2 border rounded-md btn flex-grow">Select</button>
+                        <button id="tool-trench" class="p-2 border rounded-md btn flex-grow">Dig Trench</button>
+                        <button id="tool-wall" class="p-2 border rounded-md btn flex-grow">Build Wall</button>
+                        <button id="tool-cannon" class="p-2 border rounded-md btn flex-grow">Place Cannon</button>
+                         <button id="tool-water" class="p-2 border rounded-md btn flex-grow">Place Water</button>
+                        <button id="tool-remove" class="p-2 border rounded-md btn flex-grow bg-red-100 border-red-200 hover:bg-red-200">Remove</button>
+                    </div>
+                    <div class="mt-4">
+                        <label for="algorithm-select" class="text-sm font-medium">Trench Algorithm:</label>
+                        <select id="algorithm-select" class="w-full p-2 mt-1 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="sapperTrench">Sapper Trench (A*)</option>
+                            <option value="directApproach">Direct Approach</option>
+                        </select>
+                        <button id="generate-trench-button" class="w-full mt-2 p-2 border rounded-md btn bg-slate-200">Generate Trench</button>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-lg font-semibold border-b border-slate-300 pb-2 mb-3">Artillery Settings</h2>
+                    <p class="text-xs text-slate-500 mb-3">0&deg; is right, -90&deg; is up. Adjust before placing or modifying.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="cannon-angle" class="block text-sm font-medium">Angle: <span id="angle-value">0</span>&deg;</label>
+                            <input type="range" id="cannon-angle" min="-180" max="180" value="0" class="w-full">
+                        </div>
+                        <div>
+                            <label for="cannon-power" class="block text-sm font-medium">Power: <span id="power-value">50</span></label>
+                            <input type="range" id="cannon-power" min="10" max="100" value="50" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-grow"></div>
+
+                <div>
+                    <div class="flex flex-col gap-2">
+                         <button id="fire-button" class="p-3 bg-red-600 text-white rounded-md font-bold btn hover:bg-red-700">FIRE ALL CANNONS</button>
+                         <button id="reset-button" class="p-2 bg-slate-500 text-white rounded-md btn hover:bg-slate-600">Reset All</button>
+                    </div>
+                </div>
+
+                <div class="flex-shrink-0">
+                    <h2 class="text-lg font-semibold border-b border-slate-300 pb-2 mb-3">Battle Report</h2>
+                    <div id="info-panel" class="p-3 bg-slate-100 rounded-md h-24 text-sm text-slate-700 overflow-y-auto border border-slate-200">
+                        Welcome! Select a fort and design your defenses.
+                    </div>
+                </div>
+            </aside>
+
+            <main id="canvas-container" class="flex-grow relative rounded-lg bg-slate-800 flex items-center justify-center min-h-0">
+                </main>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
